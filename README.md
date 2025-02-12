@@ -144,3 +144,8 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## Support
 
 For support, please open an issue in the GitHub repository.
+
+
+sudo apt install certbot python3-certbot-nginx -y
+sudo certbot --nginx -d your_domain.   sudo systemctl status fastapi.service
+sudo systemctl status nginx
