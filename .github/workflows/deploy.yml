@@ -1,19 +1,50 @@
-name: Deploy to production environment
+name: Deployment Pipeline
+
 on:
   push:
-    branches: [main]
+    branches:
+      - main
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
+
+    env:
+      SSH_PRIVATE_KEY: ${{ secrets.VPS_SSH_KEY }}
+      SERVER_IP: ${{ secrets.VPS_HOST }}
+      USER: ${{ secrets.VPS_USER }}
+
     steps:
-      - name: Deploy to server
-        uses: appleboy/ssh-action@master
-        with:
-          host: ${{ secrets.VPS_HOST }}
-          username: ${{ secrets.VPS_USER }}
-          key: ${{ secrets.VPS_SSH_KEY }}
-          script: |
-            cd /root/fastapi-book-project
-            git pull origin main
-            pip install -r requirements.txt
-            sudo systemctl restart fastapi
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Environment Variables
+        run: |
+          echo "Server IP: $SERVER_IP"
+          echo "User: $USER"
+
+      - name: Set Up SSH
+        run: |
+          # Setup SSH
+          mkdir -p ~/.ssh
+          echo "$SSH_PRIVATE_KEY" | tr -d '\r' > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H $SERVER_IP >> ~/.ssh/known_hosts
+            chmod 644 ~/.ssh/known_hosts
+
+
+      - name: SSH Into Web Server, Fetch Latest Changes and Run Changes
+        run: |
+          ssh $USER@$SERVER_IP -i ~/.ssh/id_rsa
+          sudo apt install software-properties-common -y
+          sudo add-apt-repository ppa:deadsnakes/ppa
+          sudo apt install python3.10 python3.10-venv python3.10-dev -y
+          git clone https://github.com/Anuoluwapo25/fastapi-book-project
+          cd fastapi-book-project
+          git pull
+          python3.10 -m venv venv
+          source venv/bin/activate
+          python -m ensurepip --upgrade
+          pip install --upgrade pip
+          pip install -r requirements.txt
+          nohup uvicorn main:app --host 0.0.0.0 --port 8000 &
